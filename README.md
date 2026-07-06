@@ -1,4 +1,4 @@
-# Pace de Vendas — LEAP
+# Dashboard de Vendas — LEAP
 
 Dashboard de pace de vendas com filtro por expert e por período, comparando a receita
 acumulada com uma meta definida para o período.

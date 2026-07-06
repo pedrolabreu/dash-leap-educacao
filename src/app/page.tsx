@@ -156,7 +156,7 @@ export default function Home() {
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
-              Pace de Vendas — LEAP
+              Dashboard de Vendas
             </h1>
             <p className="text-sm text-[var(--text-muted)]">
               {fetchedAt

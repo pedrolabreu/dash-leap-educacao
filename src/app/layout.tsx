@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Pace de Vendas — LEAP",
+  title: "Dashboard de Vendas",
   description: "Dashboard de pace de vendas por expert e período",
 };
 

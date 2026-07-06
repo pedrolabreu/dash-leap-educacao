@@ -13,6 +13,22 @@ function col(row: Record<string, string>, key: string): string {
   return (row[key] ?? "").trim();
 }
 
+/**
+ * The sheet's DATA column has been observed both as ISO (2026-07-02) and as
+ * Brazilian-locale text (02/07/2026, from a cell format change upstream) —
+ * normalize either to ISO yyyy-mm-dd since all filtering/sorting is done on
+ * that string.
+ */
+function parseDataDate(raw: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const br = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (br) {
+    const [, day, month, year] = br;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+  return raw;
+}
+
 export function parseSalesCsv(csvText: string): Sale[] {
   const { data } = Papa.parse<Record<string, string>>(csvText, {
     header: true,
@@ -22,7 +38,7 @@ export function parseSalesCsv(csvText: string): Sale[] {
   return data
     .filter((row) => col(row, "DATA") && col(row, "EXPERT"))
     .map((row) => ({
-      date: col(row, "DATA"),
+      date: parseDataDate(col(row, "DATA")),
       name: col(row, "NOME"),
       email: col(row, "EMAIL"),
       phone: col(row, "TELEFONE"),
