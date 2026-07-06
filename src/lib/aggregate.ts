@@ -1,0 +1,209 @@
+import type { Sale } from "./types";
+
+export interface DateRange {
+  start: string; // ISO yyyy-mm-dd
+  end: string; // ISO yyyy-mm-dd, inclusive
+}
+
+export function uniqueExperts(sales: Sale[]): string[] {
+  return Array.from(new Set(sales.map((s) => s.expert))).sort((a, b) =>
+    a.localeCompare(b, "pt-BR"),
+  );
+}
+
+export function filterSales(
+  sales: Sale[],
+  range: DateRange,
+  experts: string[] | null,
+): Sale[] {
+  return sales.filter((s) => {
+    if (s.date < range.start || s.date > range.end) return false;
+    if (experts && experts.length > 0 && !experts.includes(s.expert))
+      return false;
+    return true;
+  });
+}
+
+export function enumerateDays(range: DateRange): string[] {
+  const days: string[] = [];
+  const cur = new Date(`${range.start}T00:00:00Z`);
+  const end = new Date(`${range.end}T00:00:00Z`);
+  while (cur <= end) {
+    days.push(cur.toISOString().slice(0, 10));
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+  return days;
+}
+
+export function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export type PresetKey = "today" | "7d" | "30d" | "mtd" | "all";
+
+export function presetRange(
+  preset: PresetKey,
+  today: string,
+  allDates: string[],
+): DateRange {
+  if (preset === "today") return { start: today, end: today };
+  if (preset === "7d") return { start: addDaysIso(today, -6), end: today };
+  if (preset === "30d") return { start: addDaysIso(today, -29), end: today };
+  if (preset === "mtd") return { start: `${today.slice(0, 7)}-01`, end: today };
+  // all
+  const min = allDates.length ? allDates.reduce((a, b) => (a < b ? a : b)) : today;
+  const max = allDates.length ? allDates.reduce((a, b) => (a > b ? a : b)) : today;
+  return { start: min, end: max };
+}
+
+function addDaysIso(iso: string, delta: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+export interface PacePoint {
+  date: string;
+  actualCumulative: number | null;
+  targetCumulative: number | null;
+}
+
+export function buildPaceSeries(
+  filtered: Sale[],
+  range: DateRange,
+  goal: number | null,
+  today: string,
+): PacePoint[] {
+  const days = enumerateDays(range);
+  const dailyTotals = new Map<string, number>();
+  for (const s of filtered) {
+    dailyTotals.set(s.date, (dailyTotals.get(s.date) ?? 0) + s.value);
+  }
+  const totalDays = days.length;
+  let cumulative = 0;
+  return days.map((date, i) => {
+    const isFuture = date > today;
+    if (!isFuture) cumulative += dailyTotals.get(date) ?? 0;
+    return {
+      date,
+      actualCumulative: isFuture ? null : cumulative,
+      targetCumulative: goal != null ? (goal * (i + 1)) / totalDays : null,
+    };
+  });
+}
+
+export interface DailyPoint {
+  date: string;
+  revenue: number;
+  count: number;
+}
+
+export function buildDailySeries(
+  filtered: Sale[],
+  range: DateRange,
+): DailyPoint[] {
+  const days = enumerateDays(range);
+  const revenueMap = new Map<string, number>();
+  const countMap = new Map<string, number>();
+  for (const s of filtered) {
+    revenueMap.set(s.date, (revenueMap.get(s.date) ?? 0) + s.value);
+    countMap.set(s.date, (countMap.get(s.date) ?? 0) + 1);
+  }
+  return days.map((date) => ({
+    date,
+    revenue: revenueMap.get(date) ?? 0,
+    count: countMap.get(date) ?? 0,
+  }));
+}
+
+export interface ExpertBreakdownRow {
+  expert: string;
+  revenue: number;
+  count: number;
+  share: number;
+}
+
+export function buildExpertBreakdown(filtered: Sale[]): ExpertBreakdownRow[] {
+  const totals = new Map<string, { revenue: number; count: number }>();
+  let totalRevenue = 0;
+  for (const s of filtered) {
+    const t = totals.get(s.expert) ?? { revenue: 0, count: 0 };
+    t.revenue += s.value;
+    t.count += 1;
+    totals.set(s.expert, t);
+    totalRevenue += s.value;
+  }
+  return Array.from(totals.entries())
+    .map(([expert, t]) => ({
+      expert,
+      revenue: t.revenue,
+      count: t.count,
+      share: totalRevenue > 0 ? t.revenue / totalRevenue : 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+}
+
+export type PaceStatus = "good" | "warning" | "critical" | "none";
+
+export interface Kpis {
+  revenue: number;
+  count: number;
+  averageTicket: number;
+  goal: number | null;
+  goalProgress: number | null;
+  daysElapsed: number;
+  totalDays: number;
+  projectedTotal: number | null;
+  paceStatus: PaceStatus;
+  paceLabel: string;
+}
+
+export function computeKpis(
+  filtered: Sale[],
+  range: DateRange,
+  goal: number | null,
+  today: string,
+): Kpis {
+  const revenue = filtered.reduce((sum, s) => sum + s.value, 0);
+  const count = filtered.length;
+  const averageTicket = count > 0 ? revenue / count : 0;
+
+  const days = enumerateDays(range);
+  const totalDays = days.length;
+  const daysElapsed = days.filter((d) => d <= today).length || 1;
+
+  const projectedTotal =
+    goal != null ? (revenue / daysElapsed) * totalDays : null;
+
+  let paceStatus: PaceStatus = "none";
+  let paceLabel = "Sem meta definida";
+  if (goal != null && goal > 0) {
+    const ratio = (projectedTotal ?? 0) / goal;
+    if (ratio >= 1.02) {
+      paceStatus = "good";
+      paceLabel = "Adiantado";
+    } else if (ratio >= 0.98) {
+      paceStatus = "good";
+      paceLabel = "No ritmo";
+    } else if (ratio >= 0.85) {
+      paceStatus = "warning";
+      paceLabel = "Atenção";
+    } else {
+      paceStatus = "critical";
+      paceLabel = "Atrasado";
+    }
+  }
+
+  return {
+    revenue,
+    count,
+    averageTicket,
+    goal,
+    goalProgress: goal != null && goal > 0 ? revenue / goal : null,
+    daysElapsed,
+    totalDays,
+    projectedTotal,
+    paceStatus,
+    paceLabel,
+  };
+}
