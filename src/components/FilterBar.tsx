@@ -77,10 +77,6 @@ export function FilterBar({
   selectedExperts,
   onToggleExpert,
   onSelectAllExperts,
-  allChannels,
-  selectedChannels,
-  onToggleChannel,
-  onSelectAllChannels,
 }: {
   preset: PresetKey | "custom";
   onPresetChange: (p: PresetKey) => void;
@@ -90,10 +86,6 @@ export function FilterBar({
   selectedExperts: string[];
   onToggleExpert: (expert: string) => void;
   onSelectAllExperts: () => void;
-  allChannels: string[];
-  selectedChannels: string[];
-  onToggleChannel: (channel: string) => void;
-  onSelectAllChannels: () => void;
 }) {
   const isDark = useIsDark();
 
@@ -140,15 +132,6 @@ export function FilterBar({
         selected={selectedExperts}
         onToggle={onToggleExpert}
         onSelectAll={onSelectAllExperts}
-        isDark={isDark}
-      />
-
-      <EntityFilterRow
-        allLabel="Todos os canais"
-        entities={allChannels}
-        selected={selectedChannels}
-        onToggle={onToggleChannel}
-        onSelectAll={onSelectAllChannels}
         isDark={isDark}
       />
     </div>

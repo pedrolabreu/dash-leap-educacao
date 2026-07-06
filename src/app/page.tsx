@@ -47,7 +47,6 @@ export default function Home() {
   const [preset, setPreset] = useState<PresetKey | "custom">("mtd");
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [selectedExperts, setSelectedExperts] = useState<string[]>([]);
-  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
 
   const today = todayIso();
 
@@ -118,21 +117,12 @@ export default function Home() {
     );
   }
 
-  function toggleChannel(channel: string) {
-    setSelectedChannels((prev) =>
-      prev.includes(channel)
-        ? prev.filter((c) => c !== channel)
-        : [...prev, channel],
-    );
-  }
-
   const filtered = useMemo(
     () =>
       filterSales(sales ?? [], range, {
         experts: selectedExperts.length ? selectedExperts : null,
-        channels: selectedChannels.length ? selectedChannels : null,
       }),
-    [sales, range, selectedExperts, selectedChannels],
+    [sales, range, selectedExperts],
   );
 
   const paceSeries = useMemo(
@@ -192,10 +182,6 @@ export default function Home() {
           selectedExperts={selectedExperts}
           onToggleExpert={toggleExpert}
           onSelectAllExperts={() => setSelectedExperts([])}
-          allChannels={allChannels}
-          selectedChannels={selectedChannels}
-          onToggleChannel={toggleChannel}
-          onSelectAllChannels={() => setSelectedChannels([])}
         />
 
         <KpiCards kpis={kpis} />
