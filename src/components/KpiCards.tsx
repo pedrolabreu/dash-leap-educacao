@@ -46,9 +46,7 @@ export function KpiCards({ kpis }: { kpis: Kpis }) {
       />
       <Tile
         label="Projeção de fechamento"
-        value={
-          kpis.projectedTotal != null ? formatBRL(kpis.projectedTotal) : "—"
-        }
+        value={formatBRL(kpis.projectedTotal)}
         sub={<StatusBadge status={kpis.paceStatus} label={kpis.paceLabel} />}
       />
       <Tile

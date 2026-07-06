@@ -245,7 +245,7 @@ export interface Kpis {
   goalProgress: number | null;
   daysElapsed: number;
   totalDays: number;
-  projectedTotal: number | null;
+  projectedTotal: number;
   paceStatus: PaceStatus;
   paceLabel: string;
   gap: number | null;
@@ -265,13 +265,12 @@ export function computeKpis(
   const totalDays = days.length;
   const daysElapsed = days.filter((d) => d <= today).length || 1;
 
-  const projectedTotal =
-    goal != null ? (revenue / daysElapsed) * totalDays : null;
+  const projectedTotal = (revenue / daysElapsed) * totalDays;
 
   let paceStatus: PaceStatus = "none";
   let paceLabel = "Sem meta definida";
   if (goal != null && goal > 0) {
-    const ratio = (projectedTotal ?? 0) / goal;
+    const ratio = projectedTotal / goal;
     if (ratio >= 1.02) {
       paceStatus = "good";
       paceLabel = "Adiantado";
