@@ -18,29 +18,21 @@ import {
   type PresetKey,
 } from "@/lib/aggregate";
 import { FilterBar } from "@/components/FilterBar";
-import { GoalInput } from "@/components/GoalInput";
 import { KpiCards } from "@/components/KpiCards";
 import { PaceChart } from "@/components/PaceChart";
 import { DailyChart } from "@/components/DailyChart";
 import { ExpertBreakdown } from "@/components/ExpertBreakdown";
 import { ProductBreakdown } from "@/components/ProductBreakdown";
 import { ChannelBreakdown } from "@/components/ChannelBreakdown";
+import { TeamGoals } from "@/components/TeamGoals";
 import { Card } from "@/components/Card";
+import { findMonthGoals, type MonthGoals } from "@/lib/goals";
 
 const REFRESH_MS = 60_000;
 
-function goalStorageKey(range: DateRange): string {
-  return `leap-sales-dash:goal:${range.start}:${range.end}`;
-}
-
-function readGoal(range: DateRange): number | null {
-  if (typeof window === "undefined") return null;
-  const stored = localStorage.getItem(goalStorageKey(range));
-  return stored ? Number(stored) : null;
-}
-
 export default function Home() {
   const [sales, setSales] = useState<Sale[] | null>(null);
+  const [goals, setGoals] = useState<MonthGoals[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
@@ -55,12 +47,18 @@ export default function Home() {
 
     async function load() {
       try {
-        const res = await fetch("/api/sales", { cache: "no-store" });
-        if (!res.ok) throw new Error(`Erro ${res.status}`);
-        const json = await res.json();
+        const [salesRes, goalsRes] = await Promise.all([
+          fetch("/api/sales", { cache: "no-store" }),
+          fetch("/api/goals", { cache: "no-store" }),
+        ]);
+        if (!salesRes.ok) throw new Error(`Erro ${salesRes.status}`);
+        if (!goalsRes.ok) throw new Error(`Erro ${goalsRes.status}`);
+        const salesJson = await salesRes.json();
+        const goalsJson = await goalsRes.json();
         if (cancelled) return;
-        setSales(json.sales);
-        setFetchedAt(json.fetchedAt);
+        setSales(salesJson.sales);
+        setGoals(goalsJson.goals);
+        setFetchedAt(salesJson.fetchedAt);
         setError(null);
       } catch {
         if (!cancelled)
@@ -85,19 +83,12 @@ export default function Home() {
     return presetRange(preset === "custom" ? "mtd" : preset, today, allDates);
   }, [preset, customRange, today, allDates]);
 
-  const rangeKey = `${range.start}:${range.end}`;
-  const [loadedRangeKey, setLoadedRangeKey] = useState(rangeKey);
-  const [goal, setGoal] = useState<number | null>(() => readGoal(range));
-  if (rangeKey !== loadedRangeKey) {
-    setLoadedRangeKey(rangeKey);
-    setGoal(readGoal(range));
-  }
-
-  function handleGoalChange(value: number | null) {
-    setGoal(value);
-    if (value == null) localStorage.removeItem(goalStorageKey(range));
-    else localStorage.setItem(goalStorageKey(range), String(value));
-  }
+  const monthKey = range.start.slice(0, 7);
+  const monthGoals = useMemo(
+    () => (goals ? findMonthGoals(goals, monthKey) : null),
+    [goals, monthKey],
+  );
+  const goal = preset === "mtd" ? (monthGoals?.empresa ?? null) : null;
 
   function handlePresetChange(p: PresetKey) {
     setPreset(p);
@@ -153,18 +144,15 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[var(--page)] px-4 py-8 md:px-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
-              Dashboard de Vendas
-            </h1>
-            <p className="text-sm text-[var(--text-muted)]">
-              {fetchedAt
-                ? `Atualizado em ${new Date(fetchedAt).toLocaleTimeString("pt-BR")}`
-                : "Carregando dados..."}
-            </p>
-          </div>
-          <GoalInput goal={goal} onChange={handleGoalChange} />
+        <header>
+          <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
+            Dashboard de Vendas
+          </h1>
+          <p className="text-sm text-[var(--text-muted)]">
+            {fetchedAt
+              ? `Atualizado em ${new Date(fetchedAt).toLocaleTimeString("pt-BR")}`
+              : "Carregando dados..."}
+          </p>
         </header>
 
         {error && (
@@ -226,6 +214,13 @@ export default function Home() {
             />
           </Card>
         </div>
+
+        <Card>
+          <h2 className="mb-4 text-lg font-medium text-[var(--text-primary)]">
+            Metas do Comercial
+          </h2>
+          <TeamGoals monthGoals={monthGoals} />
+        </Card>
       </div>
     </div>
   );
