@@ -1,19 +1,14 @@
 "use client";
 
-import type { ExpertBreakdownRow } from "@/lib/aggregate";
-import { buildCategoricalColorMap } from "@/lib/colors";
+import type { ProductBreakdownRow } from "@/lib/aggregate";
+import { CATEGORICAL } from "@/lib/colors";
 import { useIsDark } from "@/lib/useIsDark";
 import { formatBRL, formatPercent } from "@/lib/format";
 
-export function ExpertBreakdown({
-  rows,
-  allExpertsInFixedOrder,
-}: {
-  rows: ExpertBreakdownRow[];
-  allExpertsInFixedOrder: string[];
-}) {
+export function ProductBreakdown({ rows }: { rows: ProductBreakdownRow[] }) {
   const isDark = useIsDark();
-  const colorMap = buildCategoricalColorMap(allExpertsInFixedOrder);
+  const barColor = isDark ? CATEGORICAL[0].dark : CATEGORICAL[0].light;
+  const otherColor = "var(--text-muted)";
   const max = Math.max(1, ...rows.map((r) => r.revenue));
 
   if (rows.length === 0) {
@@ -27,14 +22,16 @@ export function ExpertBreakdown({
   return (
     <div className="flex flex-col gap-3">
       {rows.map((row) => {
-        const color = colorMap.get(row.expert);
-        const barColor = color ? (isDark ? color.dark : color.light) : "#888";
+        const isOther = row.product === "Outros";
         const widthPct = Math.max(2, (row.revenue / max) * 100);
         return (
-          <div key={row.expert}>
-            <div className="mb-1 flex items-baseline justify-between text-sm">
-              <span className="font-medium text-[var(--text-primary)]">
-                {row.expert}
+          <div key={row.product}>
+            <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-sm">
+              <span
+                className="font-medium text-[var(--text-primary)]"
+                title={row.product}
+              >
+                {row.product}
               </span>
               <span className="tabular-nums text-[var(--text-secondary)]">
                 {formatBRL(row.revenue)}{" "}
@@ -47,7 +44,10 @@ export function ExpertBreakdown({
             <div className="h-2 w-full rounded-full bg-[var(--border)]">
               <div
                 className="h-2 rounded-full"
-                style={{ width: `${widthPct}%`, background: barColor }}
+                style={{
+                  width: `${widthPct}%`,
+                  background: isOther ? otherColor : barColor,
+                }}
               />
             </div>
           </div>

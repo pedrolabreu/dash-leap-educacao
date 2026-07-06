@@ -26,34 +26,42 @@ function Tile({
 export function KpiCards({ kpis }: { kpis: Kpis }) {
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-      <Tile label="Receita no período" value={formatBRL(kpis.revenue)} />
+      <Tile label="Faturamento do mês" value={formatBRL(kpis.revenue)} />
       <Tile
-        label="Vendas"
-        value={kpis.count.toLocaleString("pt-BR")}
-        sub={
-          <span className="text-[var(--text-muted)]">
-            Ticket médio {formatBRL(kpis.averageTicket)}
-          </span>
-        }
+        label="Meta do mês"
+        value={kpis.goal != null ? formatBRL(kpis.goal) : "—"}
       />
       <Tile
-        label="Meta do período"
-        value={kpis.goal != null ? formatBRL(kpis.goal) : "—"}
+        label="Realizado x meta"
+        value={
+          kpis.goalProgress != null ? formatPercent(kpis.goalProgress) : "—"
+        }
         sub={
-          kpis.goalProgress != null && (
+          kpis.goal == null && (
             <span className="text-[var(--text-muted)]">
-              {formatPercent(kpis.goalProgress)} atingido
+              Defina uma meta acima
             </span>
           )
         }
       />
       <Tile
-        label="Projeção ao final do período"
+        label="Projeção de fechamento"
         value={
           kpis.projectedTotal != null ? formatBRL(kpis.projectedTotal) : "—"
         }
         sub={<StatusBadge status={kpis.paceStatus} label={kpis.paceLabel} />}
       />
+      <Tile
+        label="Gap para meta"
+        value={kpis.gap != null ? formatBRL(kpis.gap) : "—"}
+        sub={
+          kpis.gap === 0 && kpis.goal != null ? (
+            <span className="text-[var(--success-text)]">Meta batida</span>
+          ) : undefined
+        }
+      />
+      <Tile label="Ticket médio" value={formatBRL(kpis.averageTicket)} />
+      <Tile label="Número de vendas" value={kpis.count.toLocaleString("pt-BR")} />
     </div>
   );
 }

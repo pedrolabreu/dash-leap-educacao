@@ -19,16 +19,16 @@ export const STATUS = {
 };
 
 /**
- * Stable expert -> categorical slot mapping. The order must be derived from
- * the full, unfiltered roster so that toggling the expert filter never
- * repaints the survivors.
+ * Stable entity -> categorical slot mapping. The order must be derived from
+ * the full, unfiltered roster so that toggling a filter never repaints the
+ * survivors.
  */
-export function buildExpertColorMap(
-  allExpertsInFixedOrder: string[],
+export function buildCategoricalColorMap(
+  allEntitiesInFixedOrder: string[],
 ): Map<string, { light: string; dark: string }> {
   const map = new Map<string, { light: string; dark: string }>();
-  allExpertsInFixedOrder.forEach((expert, i) => {
-    map.set(expert, CATEGORICAL[i % CATEGORICAL.length]);
+  allEntitiesInFixedOrder.forEach((entity, i) => {
+    map.set(entity, CATEGORICAL[i % CATEGORICAL.length]);
   });
   return map;
 }

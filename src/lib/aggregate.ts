@@ -11,14 +11,34 @@ export function uniqueExperts(sales: Sale[]): string[] {
   );
 }
 
+const DIRECT_CHANNEL_LABEL = "Direto / Não informado";
+
+export function channelOf(sale: Sale): string {
+  return sale.utmSource.trim() || DIRECT_CHANNEL_LABEL;
+}
+
+export function uniqueChannels(sales: Sale[]): string[] {
+  return Array.from(new Set(sales.map(channelOf))).sort((a, b) =>
+    a.localeCompare(b, "pt-BR"),
+  );
+}
+
+export interface SaleFilters {
+  experts?: string[] | null;
+  channels?: string[] | null;
+}
+
 export function filterSales(
   sales: Sale[],
   range: DateRange,
-  experts: string[] | null,
+  filters: SaleFilters = {},
 ): Sale[] {
+  const { experts, channels } = filters;
   return sales.filter((s) => {
     if (s.date < range.start || s.date > range.end) return false;
     if (experts && experts.length > 0 && !experts.includes(s.expert))
+      return false;
+    if (channels && channels.length > 0 && !channels.includes(channelOf(s)))
       return false;
     return true;
   });
@@ -143,6 +163,78 @@ export function buildExpertBreakdown(filtered: Sale[]): ExpertBreakdownRow[] {
     .sort((a, b) => b.revenue - a.revenue);
 }
 
+export interface ChannelBreakdownRow {
+  channel: string;
+  revenue: number;
+  count: number;
+  share: number;
+}
+
+export function buildChannelBreakdown(filtered: Sale[]): ChannelBreakdownRow[] {
+  const totals = new Map<string, { revenue: number; count: number }>();
+  let totalRevenue = 0;
+  for (const s of filtered) {
+    const channel = channelOf(s);
+    const t = totals.get(channel) ?? { revenue: 0, count: 0 };
+    t.revenue += s.value;
+    t.count += 1;
+    totals.set(channel, t);
+    totalRevenue += s.value;
+  }
+  return Array.from(totals.entries())
+    .map(([channel, t]) => ({
+      channel,
+      revenue: t.revenue,
+      count: t.count,
+      share: totalRevenue > 0 ? t.revenue / totalRevenue : 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+}
+
+export interface ProductBreakdownRow {
+  product: string;
+  revenue: number;
+  count: number;
+  share: number;
+}
+
+export function buildProductBreakdown(
+  filtered: Sale[],
+  topN = 8,
+): ProductBreakdownRow[] {
+  const totals = new Map<string, { revenue: number; count: number }>();
+  let totalRevenue = 0;
+  for (const s of filtered) {
+    const t = totals.get(s.product) ?? { revenue: 0, count: 0 };
+    t.revenue += s.value;
+    t.count += 1;
+    totals.set(s.product, t);
+    totalRevenue += s.value;
+  }
+  const rows = Array.from(totals.entries())
+    .map(([product, t]) => ({
+      product,
+      revenue: t.revenue,
+      count: t.count,
+      share: totalRevenue > 0 ? t.revenue / totalRevenue : 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  if (rows.length <= topN) return rows;
+
+  const top = rows.slice(0, topN);
+  const other = rows.slice(topN).reduce(
+    (acc, r) => ({
+      product: "Outros",
+      revenue: acc.revenue + r.revenue,
+      count: acc.count + r.count,
+      share: acc.share + r.share,
+    }),
+    { product: "Outros", revenue: 0, count: 0, share: 0 },
+  );
+  return [...top, other];
+}
+
 export type PaceStatus = "good" | "warning" | "critical" | "none";
 
 export interface Kpis {
@@ -156,6 +248,7 @@ export interface Kpis {
   projectedTotal: number | null;
   paceStatus: PaceStatus;
   paceLabel: string;
+  gap: number | null;
 }
 
 export function computeKpis(
@@ -205,5 +298,6 @@ export function computeKpis(
     projectedTotal,
     paceStatus,
     paceLabel,
+    gap: goal != null ? Math.max(0, goal - revenue) : null,
   };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import type { DateRange, PresetKey } from "@/lib/aggregate";
-import { buildExpertColorMap } from "@/lib/colors";
+import { buildCategoricalColorMap } from "@/lib/colors";
 import { useIsDark } from "@/lib/useIsDark";
 
 const PRESETS: { key: PresetKey; label: string }[] = [
@@ -12,6 +12,62 @@ const PRESETS: { key: PresetKey; label: string }[] = [
   { key: "all", label: "Tudo" },
 ];
 
+function EntityFilterRow({
+  allLabel,
+  entities,
+  selected,
+  onToggle,
+  onSelectAll,
+  isDark,
+}: {
+  allLabel: string;
+  entities: string[];
+  selected: string[];
+  onToggle: (entity: string) => void;
+  onSelectAll: () => void;
+  isDark: boolean;
+}) {
+  const colorMap = buildCategoricalColorMap(entities);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        onClick={onSelectAll}
+        className={`rounded-full px-3 py-1.5 text-sm border transition-colors ${
+          selected.length === 0
+            ? "bg-[var(--text-primary)] text-[var(--surface)] border-[var(--text-primary)]"
+            : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--border)]"
+        }`}
+      >
+        {allLabel}
+      </button>
+      {entities.map((entity) => {
+        const active = selected.includes(entity);
+        const color = colorMap.get(entity);
+        const dot = color ? (isDark ? color.dark : color.light) : "#888";
+        return (
+          <button
+            key={entity}
+            onClick={() => onToggle(entity)}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border transition-colors ${
+              active
+                ? "border-[var(--text-primary)] text-[var(--text-primary)]"
+                : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--border)]"
+            }`}
+          >
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ background: dot }}
+              aria-hidden="true"
+            />
+            {entity}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function FilterBar({
   preset,
   onPresetChange,
@@ -21,6 +77,10 @@ export function FilterBar({
   selectedExperts,
   onToggleExpert,
   onSelectAllExperts,
+  allChannels,
+  selectedChannels,
+  onToggleChannel,
+  onSelectAllChannels,
 }: {
   preset: PresetKey | "custom";
   onPresetChange: (p: PresetKey) => void;
@@ -30,9 +90,12 @@ export function FilterBar({
   selectedExperts: string[];
   onToggleExpert: (expert: string) => void;
   onSelectAllExperts: () => void;
+  allChannels: string[];
+  selectedChannels: string[];
+  onToggleChannel: (channel: string) => void;
+  onSelectAllChannels: () => void;
 }) {
   const isDark = useIsDark();
-  const colorMap = buildExpertColorMap(allExperts);
 
   return (
     <div className="flex flex-col gap-3">
@@ -71,41 +134,23 @@ export function FilterBar({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={onSelectAllExperts}
-          className={`rounded-full px-3 py-1.5 text-sm border transition-colors ${
-            selectedExperts.length === 0
-              ? "bg-[var(--text-primary)] text-[var(--surface)] border-[var(--text-primary)]"
-              : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--border)]"
-          }`}
-        >
-          Todos os experts
-        </button>
-        {allExperts.map((expert) => {
-          const active = selectedExperts.includes(expert);
-          const color = colorMap.get(expert);
-          const dot = color ? (isDark ? color.dark : color.light) : "#888";
-          return (
-            <button
-              key={expert}
-              onClick={() => onToggleExpert(expert)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border transition-colors ${
-                active
-                  ? "border-[var(--text-primary)] text-[var(--text-primary)]"
-                  : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--border)]"
-              }`}
-            >
-              <span
-                className="inline-block h-2 w-2 rounded-full"
-                style={{ background: dot }}
-                aria-hidden="true"
-              />
-              {expert}
-            </button>
-          );
-        })}
-      </div>
+      <EntityFilterRow
+        allLabel="Todos os experts"
+        entities={allExperts}
+        selected={selectedExperts}
+        onToggle={onToggleExpert}
+        onSelectAll={onSelectAllExperts}
+        isDark={isDark}
+      />
+
+      <EntityFilterRow
+        allLabel="Todos os canais"
+        entities={allChannels}
+        selected={selectedChannels}
+        onToggle={onToggleChannel}
+        onSelectAll={onSelectAllChannels}
+        isDark={isDark}
+      />
     </div>
   );
 }

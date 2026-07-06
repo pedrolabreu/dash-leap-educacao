@@ -3,13 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Sale } from "@/lib/types";
 import {
+  buildChannelBreakdown,
   buildDailySeries,
   buildExpertBreakdown,
   buildPaceSeries,
+  buildProductBreakdown,
   computeKpis,
   filterSales,
   presetRange,
   todayIso,
+  uniqueChannels,
   uniqueExperts,
   type DateRange,
   type PresetKey,
@@ -20,6 +23,8 @@ import { KpiCards } from "@/components/KpiCards";
 import { PaceChart } from "@/components/PaceChart";
 import { DailyChart } from "@/components/DailyChart";
 import { ExpertBreakdown } from "@/components/ExpertBreakdown";
+import { ProductBreakdown } from "@/components/ProductBreakdown";
+import { ChannelBreakdown } from "@/components/ChannelBreakdown";
 import { Card } from "@/components/Card";
 
 const REFRESH_MS = 60_000;
@@ -42,6 +47,7 @@ export default function Home() {
   const [preset, setPreset] = useState<PresetKey | "custom">("mtd");
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [selectedExperts, setSelectedExperts] = useState<string[]>([]);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
 
   const today = todayIso();
 
@@ -72,6 +78,7 @@ export default function Home() {
   }, []);
 
   const allExperts = useMemo(() => uniqueExperts(sales ?? []), [sales]);
+  const allChannels = useMemo(() => uniqueChannels(sales ?? []), [sales]);
   const allDates = useMemo(() => (sales ?? []).map((s) => s.date), [sales]);
 
   const range: DateRange = useMemo(() => {
@@ -111,14 +118,21 @@ export default function Home() {
     );
   }
 
+  function toggleChannel(channel: string) {
+    setSelectedChannels((prev) =>
+      prev.includes(channel)
+        ? prev.filter((c) => c !== channel)
+        : [...prev, channel],
+    );
+  }
+
   const filtered = useMemo(
     () =>
-      filterSales(
-        sales ?? [],
-        range,
-        selectedExperts.length ? selectedExperts : null,
-      ),
-    [sales, range, selectedExperts],
+      filterSales(sales ?? [], range, {
+        experts: selectedExperts.length ? selectedExperts : null,
+        channels: selectedChannels.length ? selectedChannels : null,
+      }),
+    [sales, range, selectedExperts, selectedChannels],
   );
 
   const paceSeries = useMemo(
@@ -131,6 +145,14 @@ export default function Home() {
   );
   const expertBreakdown = useMemo(
     () => buildExpertBreakdown(filtered),
+    [filtered],
+  );
+  const productBreakdown = useMemo(
+    () => buildProductBreakdown(filtered),
+    [filtered],
+  );
+  const channelBreakdown = useMemo(
+    () => buildChannelBreakdown(filtered),
     [filtered],
   );
   const kpis = useMemo(
@@ -170,6 +192,10 @@ export default function Home() {
           selectedExperts={selectedExperts}
           onToggleExpert={toggleExpert}
           onSelectAllExperts={() => setSelectedExperts([])}
+          allChannels={allChannels}
+          selectedChannels={selectedChannels}
+          onToggleChannel={toggleChannel}
+          onSelectAllChannels={() => setSelectedChannels([])}
         />
 
         <KpiCards kpis={kpis} />
@@ -181,13 +207,14 @@ export default function Home() {
           <PaceChart data={paceSeries} hasGoal={goal != null} />
         </Card>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <Card>
-            <h2 className="mb-4 text-lg font-medium text-[var(--text-primary)]">
-              Receita por dia
-            </h2>
-            <DailyChart data={dailySeries} />
-          </Card>
+        <Card>
+          <h2 className="mb-4 text-lg font-medium text-[var(--text-primary)]">
+            Receita por dia
+          </h2>
+          <DailyChart data={dailySeries} />
+        </Card>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <Card>
             <h2 className="mb-4 text-lg font-medium text-[var(--text-primary)]">
               Vendas por expert
@@ -195,6 +222,21 @@ export default function Home() {
             <ExpertBreakdown
               rows={expertBreakdown}
               allExpertsInFixedOrder={allExperts}
+            />
+          </Card>
+          <Card>
+            <h2 className="mb-4 text-lg font-medium text-[var(--text-primary)]">
+              Vendas por produto
+            </h2>
+            <ProductBreakdown rows={productBreakdown} />
+          </Card>
+          <Card>
+            <h2 className="mb-4 text-lg font-medium text-[var(--text-primary)]">
+              Vendas por canal
+            </h2>
+            <ChannelBreakdown
+              rows={channelBreakdown}
+              allChannelsInFixedOrder={allChannels}
             />
           </Card>
         </div>
