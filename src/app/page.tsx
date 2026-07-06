@@ -83,12 +83,12 @@ export default function Home() {
     return presetRange(preset === "custom" ? "mtd" : preset, today, allDates);
   }, [preset, customRange, today, allDates]);
 
-  const monthKey = range.start.slice(0, 7);
+  const monthKey = today.slice(0, 7);
   const monthGoals = useMemo(
     () => (goals ? findMonthGoals(goals, monthKey) : null),
     [goals, monthKey],
   );
-  const goal = preset === "mtd" ? (monthGoals?.empresa ?? null) : null;
+  const goal = monthGoals?.empresa ?? null;
 
   function handlePresetChange(p: PresetKey) {
     setPreset(p);
@@ -178,7 +178,10 @@ export default function Home() {
           <h2 className="mb-4 text-lg font-medium text-[var(--text-primary)]">
             Pace de vendas — acumulado vs. meta
           </h2>
-          <PaceChart data={paceSeries} hasGoal={goal != null} />
+          <PaceChart
+            data={paceSeries}
+            hasGoal={goal != null && preset === "mtd"}
+          />
         </Card>
 
         <Card>
