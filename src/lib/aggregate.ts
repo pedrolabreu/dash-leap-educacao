@@ -69,7 +69,8 @@ export function presetRange(
   if (preset === "today") return { start: today, end: today };
   if (preset === "7d") return { start: addDaysIso(today, -6), end: today };
   if (preset === "30d") return { start: addDaysIso(today, -29), end: today };
-  if (preset === "mtd") return { start: `${today.slice(0, 7)}-01`, end: today };
+  if (preset === "mtd")
+    return { start: `${today.slice(0, 7)}-01`, end: lastDayOfMonth(today) };
   // all
   const min = allDates.length ? allDates.reduce((a, b) => (a < b ? a : b)) : today;
   const max = allDates.length ? allDates.reduce((a, b) => (a > b ? a : b)) : today;
@@ -79,6 +80,13 @@ export function presetRange(
 function addDaysIso(iso: string, delta: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+function lastDayOfMonth(iso: string): string {
+  const [year, month] = iso.split("-").map(Number);
+  // Day 0 of next month rolls back to the last day of this month.
+  const d = new Date(Date.UTC(year, month, 0));
   return d.toISOString().slice(0, 10);
 }
 
