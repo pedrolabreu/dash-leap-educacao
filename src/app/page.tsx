@@ -27,12 +27,14 @@ import { ChannelBreakdown } from "@/components/ChannelBreakdown";
 import { TeamGoals } from "@/components/TeamGoals";
 import { Card } from "@/components/Card";
 import { findMonthGoals, type MonthGoals } from "@/lib/goals";
+import type { DayGoal } from "@/lib/dailyGoals";
 
 const REFRESH_MS = 60_000;
 
 export default function Home() {
   const [sales, setSales] = useState<Sale[] | null>(null);
   const [goals, setGoals] = useState<MonthGoals[] | null>(null);
+  const [dailyGoals, setDailyGoals] = useState<DayGoal[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
@@ -47,17 +49,21 @@ export default function Home() {
 
     async function load() {
       try {
-        const [salesRes, goalsRes] = await Promise.all([
+        const [salesRes, goalsRes, dailyGoalsRes] = await Promise.all([
           fetch("/api/sales", { cache: "no-store" }),
           fetch("/api/goals", { cache: "no-store" }),
+          fetch("/api/daily-goals", { cache: "no-store" }),
         ]);
         if (!salesRes.ok) throw new Error(`Erro ${salesRes.status}`);
         if (!goalsRes.ok) throw new Error(`Erro ${goalsRes.status}`);
+        if (!dailyGoalsRes.ok) throw new Error(`Erro ${dailyGoalsRes.status}`);
         const salesJson = await salesRes.json();
         const goalsJson = await goalsRes.json();
+        const dailyGoalsJson = await dailyGoalsRes.json();
         if (cancelled) return;
         setSales(salesJson.sales);
         setGoals(goalsJson.goals);
+        setDailyGoals(dailyGoalsJson.dailyGoals);
         setFetchedAt(salesJson.fetchedAt);
         setError(null);
       } catch {
@@ -88,7 +94,21 @@ export default function Home() {
     () => (goals ? findMonthGoals(goals, monthKey) : null),
     [goals, monthKey],
   );
-  const goal = monthGoals?.empresa ?? null;
+  const dailyTargetMap = useMemo(() => {
+    const map = new Map<string, number>();
+    (dailyGoals ?? []).forEach((d) => map.set(d.date, d.metaEquipe));
+    return map;
+  }, [dailyGoals]);
+  const monthlyGoalFromDaily = useMemo(() => {
+    let sum = 0;
+    for (const d of dailyGoals ?? []) {
+      if (d.date.startsWith(monthKey)) sum += d.metaEquipe;
+    }
+    return sum;
+  }, [dailyGoals, monthKey]);
+  const goal =
+    (monthlyGoalFromDaily > 0 ? monthlyGoalFromDaily : monthGoals?.empresa) ??
+    null;
 
   function handlePresetChange(p: PresetKey) {
     setPreset(p);
@@ -117,8 +137,8 @@ export default function Home() {
   );
 
   const paceSeries = useMemo(
-    () => buildPaceSeries(filtered, range, goal, today),
-    [filtered, range, goal, today],
+    () => buildPaceSeries(filtered, range, goal, today, dailyTargetMap),
+    [filtered, range, goal, today, dailyTargetMap],
   );
   const dailySeries = useMemo(
     () => buildDailySeries(filtered, range),
@@ -178,10 +198,7 @@ export default function Home() {
           <h2 className="mb-4 text-lg font-medium text-[var(--text-primary)]">
             Pace de vendas — acumulado vs. meta
           </h2>
-          <PaceChart
-            data={paceSeries}
-            hasGoal={goal != null && preset === "mtd"}
-          />
+          <PaceChart data={paceSeries} hasGoal={goal != null} />
         </Card>
 
         <Card>

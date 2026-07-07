@@ -101,6 +101,7 @@ export function buildPaceSeries(
   range: DateRange,
   goal: number | null,
   today: string,
+  dailyTargets?: Map<string, number>,
 ): PacePoint[] {
   const days = enumerateDays(range);
   const dailyTotals = new Map<string, number>();
@@ -108,14 +109,19 @@ export function buildPaceSeries(
     dailyTotals.set(s.date, (dailyTotals.get(s.date) ?? 0) + s.value);
   }
   const totalDays = days.length;
+  // Falls back to a flat linear share only for days missing from the daily
+  // goals sheet (e.g. a month that hasn't been broken down yet).
+  const linearShare = goal != null ? goal / totalDays : 0;
   let cumulative = 0;
-  return days.map((date, i) => {
+  let targetCumulative = 0;
+  return days.map((date) => {
     const isFuture = date > today;
     if (!isFuture) cumulative += dailyTotals.get(date) ?? 0;
+    if (goal != null) targetCumulative += dailyTargets?.get(date) ?? linearShare;
     return {
       date,
       actualCumulative: isFuture ? null : cumulative,
-      targetCumulative: goal != null ? (goal * (i + 1)) / totalDays : null,
+      targetCumulative: goal != null ? targetCumulative : null,
     };
   });
 }

@@ -82,7 +82,7 @@ export function PaceChart({
               <Line
                 type="linear"
                 dataKey="targetCumulative"
-                name="Meta (ritmo linear)"
+                name="Meta acumulada"
                 stroke={c.baseline}
                 strokeDasharray="4 4"
                 strokeWidth={2}
@@ -120,7 +120,7 @@ export function PaceChart({
               style={{ borderColor: c.baseline }}
               aria-hidden="true"
             />
-            Meta (ritmo linear)
+            Meta acumulada
           </span>
         )}
       </div>
