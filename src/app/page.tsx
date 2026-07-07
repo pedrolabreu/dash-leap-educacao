@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Sale } from "@/lib/types";
 import {
+  buildAdjustedDailyTargets,
   buildChannelBreakdown,
   buildDailySeries,
   buildExpertBreakdown,
@@ -110,6 +111,16 @@ export default function Home() {
     (monthlyGoalFromDaily > 0 ? monthlyGoalFromDaily : monthGoals?.empresa) ??
     null;
 
+  // Reforecast: a settled day's miss/beat gets spread across today and the
+  // remaining days so the fixed monthly goal still holds. Always based on
+  // whole-company actuals, independent of the expert filter — the goal
+  // itself doesn't change with that filter either.
+  const adjustedDailyTargetMap = useMemo(
+    () =>
+      buildAdjustedDailyTargets(sales ?? [], dailyTargetMap, monthKey, today),
+    [sales, dailyTargetMap, monthKey, today],
+  );
+
   function handlePresetChange(p: PresetKey) {
     setPreset(p);
     setCustomRange(null);
@@ -137,8 +148,8 @@ export default function Home() {
   );
 
   const paceSeries = useMemo(
-    () => buildPaceSeries(filtered, range, goal, today, dailyTargetMap),
-    [filtered, range, goal, today, dailyTargetMap],
+    () => buildPaceSeries(filtered, range, goal, today, adjustedDailyTargetMap),
+    [filtered, range, goal, today, adjustedDailyTargetMap],
   );
   const dailySeries = useMemo(
     () => buildDailySeries(filtered, range),

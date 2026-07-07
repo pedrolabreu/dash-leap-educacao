@@ -90,6 +90,56 @@ function lastDayOfMonth(iso: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Reforecasts the daily targets so the month's total goal always holds:
+ * every day strictly before `today` is settled (its target is left as-is —
+ * it already happened), and whatever it missed or beat its target by gets
+ * spread proportionally across today and the remaining days, scaled by
+ * their original weight. A day that overshot pulls tomorrow's bar down;
+ * a day that undershot raises it, so the sum of realized + remaining
+ * targets always equals the original monthly total.
+ */
+export function buildAdjustedDailyTargets(
+  sales: Sale[],
+  dailyTargetMap: Map<string, number>,
+  monthKey: string,
+  today: string,
+): Map<string, number> {
+  const actualByDate = new Map<string, number>();
+  for (const s of sales) {
+    if (!s.date.startsWith(monthKey)) continue;
+    actualByDate.set(s.date, (actualByDate.get(s.date) ?? 0) + s.value);
+  }
+
+  const monthDates = Array.from(dailyTargetMap.keys())
+    .filter((d) => d.startsWith(monthKey))
+    .sort();
+  const settled = monthDates.filter((d) => d < today);
+  const remaining = monthDates.filter((d) => d >= today);
+
+  const settledVariance = settled.reduce((sum, d) => {
+    const actual = actualByDate.get(d) ?? 0;
+    const target = dailyTargetMap.get(d) ?? 0;
+    return sum + (actual - target);
+  }, 0);
+
+  const originalRemainingTotal = remaining.reduce(
+    (sum, d) => sum + (dailyTargetMap.get(d) ?? 0),
+    0,
+  );
+  const adjustedRemainingTotal = originalRemainingTotal - settledVariance;
+  const scale =
+    originalRemainingTotal > 0
+      ? Math.max(0, adjustedRemainingTotal / originalRemainingTotal)
+      : 1;
+
+  const adjusted = new Map(dailyTargetMap);
+  for (const d of remaining) {
+    adjusted.set(d, (dailyTargetMap.get(d) ?? 0) * scale);
+  }
+  return adjusted;
+}
+
 export interface PacePoint {
   date: string;
   actualCumulative: number | null;
