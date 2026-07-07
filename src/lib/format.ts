@@ -18,6 +18,11 @@ export function formatDateShort(iso: string): string {
   return `${d}/${m}`;
 }
 
+export function formatDateFull(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
 export function formatPercent(value: number): string {
   return `${(value * 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%`;
 }

@@ -27,6 +27,7 @@ import { ExpertBreakdown } from "@/components/ExpertBreakdown";
 import { ProductBreakdown } from "@/components/ProductBreakdown";
 import { ChannelBreakdown } from "@/components/ChannelBreakdown";
 import { TeamGoals, type TeamGoalRow } from "@/components/TeamGoals";
+import { SalesHistory } from "@/components/SalesHistory";
 import { Card } from "@/components/Card";
 import { findMonthGoals, type MonthGoals } from "@/lib/goals";
 import type { DayGoal } from "@/lib/dailyGoals";
@@ -289,6 +290,13 @@ export default function Home() {
             Metas do Comercial
           </h2>
           <TeamGoals rows={teamGoalRows} />
+        </Card>
+
+        <Card>
+          <h2 className="mb-4 text-lg font-medium text-[var(--text-primary)]">
+            Histórico de vendas
+          </h2>
+          <SalesHistory rows={filtered} />
         </Card>
       </div>
     </div>
