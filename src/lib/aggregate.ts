@@ -255,6 +255,34 @@ export function buildChannelBreakdown(filtered: Sale[]): ChannelBreakdownRow[] {
     .sort((a, b) => b.revenue - a.revenue);
 }
 
+const COMERCIAL_CAMPAIGN = "comercial";
+
+export interface ComercialActuals {
+  total: number;
+  byVendedor: Map<string, number>; // keyed by lowercased vendedor name
+}
+
+/**
+ * Realized revenue for the Comercial team this month — a sale counts as
+ * Comercial when its UTM campaign is "comercial"; the vendedor who closed
+ * it is read from UTM medium (e.g. "lucas").
+ */
+export function buildComercialActuals(
+  sales: Sale[],
+  monthKey: string,
+): ComercialActuals {
+  let total = 0;
+  const byVendedor = new Map<string, number>();
+  for (const s of sales) {
+    if (!s.date.startsWith(monthKey)) continue;
+    if (s.utmCampaign.trim().toLowerCase() !== COMERCIAL_CAMPAIGN) continue;
+    total += s.value;
+    const key = s.utmMedium.trim().toLowerCase();
+    if (key) byVendedor.set(key, (byVendedor.get(key) ?? 0) + s.value);
+  }
+  return { total, byVendedor };
+}
+
 export interface ProductBreakdownRow {
   product: string;
   revenue: number;

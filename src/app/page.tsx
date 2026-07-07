@@ -5,6 +5,7 @@ import type { Sale } from "@/lib/types";
 import {
   buildAdjustedDailyTargets,
   buildChannelBreakdown,
+  buildComercialActuals,
   buildDailySeries,
   buildExpertBreakdown,
   buildPaceSeries,
@@ -25,7 +26,7 @@ import { DailyChart } from "@/components/DailyChart";
 import { ExpertBreakdown } from "@/components/ExpertBreakdown";
 import { ProductBreakdown } from "@/components/ProductBreakdown";
 import { ChannelBreakdown } from "@/components/ChannelBreakdown";
-import { TeamGoals } from "@/components/TeamGoals";
+import { TeamGoals, type TeamGoalRow } from "@/components/TeamGoals";
 import { Card } from "@/components/Card";
 import { findMonthGoals, type MonthGoals } from "@/lib/goals";
 import type { DayGoal } from "@/lib/dailyGoals";
@@ -107,9 +108,46 @@ export default function Home() {
     }
     return sum;
   }, [dailyGoals, monthKey]);
+  const perVendedorGoalFromDaily = useMemo(() => {
+    let sum = 0;
+    for (const d of dailyGoals ?? []) {
+      if (d.date.startsWith(monthKey)) sum += d.metaPorVendedor;
+    }
+    return sum;
+  }, [dailyGoals, monthKey]);
   const goal =
     (monthlyGoalFromDaily > 0 ? monthlyGoalFromDaily : monthGoals?.empresa) ??
     null;
+
+  const comercialActuals = useMemo(
+    () => buildComercialActuals(sales ?? [], monthKey),
+    [sales, monthKey],
+  );
+  const comercialGoal =
+    (monthlyGoalFromDaily > 0 ? monthlyGoalFromDaily : monthGoals?.comercial) ??
+    null;
+  const teamGoalRows: TeamGoalRow[] = useMemo(() => {
+    const rows: TeamGoalRow[] = [];
+    if (comercialGoal != null) {
+      rows.push({
+        label: "Comercial (time)",
+        goal: comercialGoal,
+        realized: comercialActuals.total,
+        emphasis: true,
+      });
+    }
+    for (const v of monthGoals?.vendedores ?? []) {
+      const vendedorGoal =
+        perVendedorGoalFromDaily > 0 ? perVendedorGoalFromDaily : v.value;
+      if (vendedorGoal == null) continue;
+      rows.push({
+        label: v.name,
+        goal: vendedorGoal,
+        realized: comercialActuals.byVendedor.get(v.name.toLowerCase()) ?? 0,
+      });
+    }
+    return rows;
+  }, [comercialGoal, comercialActuals, monthGoals, perVendedorGoalFromDaily]);
 
   // Reforecast: a settled day's miss/beat gets spread across today and the
   // remaining days so the fixed monthly goal still holds. Always based on
@@ -250,7 +288,7 @@ export default function Home() {
           <h2 className="mb-4 text-lg font-medium text-[var(--text-primary)]">
             Metas do Comercial
           </h2>
-          <TeamGoals monthGoals={monthGoals} />
+          <TeamGoals rows={teamGoalRows} />
         </Card>
       </div>
     </div>
