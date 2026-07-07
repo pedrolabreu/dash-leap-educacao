@@ -26,8 +26,5 @@ export async function GET() {
   const referenceYear = new Date().toISOString().slice(0, 4);
   const dailyGoals = parseDailyGoalsCsv(csvText, referenceYear);
 
-  return NextResponse.json({
-    dailyGoals,
-    debugRawCsvHead: csvText.slice(0, 500),
-  });
+  return NextResponse.json({ dailyGoals });
 }

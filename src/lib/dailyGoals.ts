@@ -36,7 +36,9 @@ function parseValue(raw: string | undefined): number {
  * whichever month is currently active, so the caller supplies the year.
  */
 function parseDiaDate(raw: string, referenceYear: string): string | null {
-  const m = raw.trim().match(/^(\d{1,2})\/([A-Za-zÀ-ÿ]{3,})$/);
+  // Google's CSV export renders this as e.g. "01/jul." — lowercase, with a
+  // trailing period on the abbreviated month.
+  const m = raw.trim().match(/^(\d{1,2})\/([A-Za-zÀ-ÿ]{3,})\.?$/);
   if (!m) return null;
   const [, day, monthName] = m;
   const month = PT_MONTHS[monthName.toLowerCase().slice(0, 3)];
