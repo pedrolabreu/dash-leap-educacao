@@ -26,7 +26,7 @@ function Tile({
 export function KpiCards({ kpis }: { kpis: Kpis }) {
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-      <Tile label="Faturamento do mês" value={formatBRL(kpis.revenue)} />
+      <Tile label="Faturamento" value={formatBRL(kpis.revenue)} />
       <Tile
         label="Meta do mês"
         value={kpis.goal != null ? formatBRL(kpis.goal) : "—"}
