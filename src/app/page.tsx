@@ -35,6 +35,7 @@ import { findMonthGoals, type MonthGoals } from "@/lib/goals";
 import type { DayGoal } from "@/lib/dailyGoals";
 
 const REFRESH_MS = 60_000;
+const VIRADA_GOAL = 100_000;
 
 export default function Home() {
   const [sales, setSales] = useState<Sale[] | null>(null);
@@ -174,18 +175,9 @@ export default function Home() {
     [sales, viradaRange],
   );
   const viradaRevenue = viradaSales.reduce((sum, s) => sum + s.value, 0);
-  const viradaGoal = useMemo(() => {
-    let sum = 0;
-    let hasAny = false;
-    for (const d of [viradaRange.start, viradaRange.end]) {
-      const value = adjustedDailyTargetMap.get(d) ?? dailyTargetMap.get(d);
-      if (value != null) {
-        sum += value;
-        hasAny = true;
-      }
-    }
-    return hasAny ? sum : null;
-  }, [adjustedDailyTargetMap, dailyTargetMap, viradaRange]);
+  // Set deliberately, not derived from the daily-goals redistribution — the
+  // virada target is a fixed, round push number for these two days.
+  const viradaGoal = VIRADA_GOAL;
   const viradaDaysUntil = Math.max(
     0,
     Math.round(
