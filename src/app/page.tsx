@@ -10,6 +10,7 @@ import {
   buildExpertBreakdown,
   buildPaceSeries,
   buildProductBreakdown,
+  buildViradaRange,
   computeKpis,
   filterSales,
   presetRange,
@@ -28,6 +29,7 @@ import { ProductBreakdown } from "@/components/ProductBreakdown";
 import { ChannelBreakdown } from "@/components/ChannelBreakdown";
 import { TeamGoals, type TeamGoalRow } from "@/components/TeamGoals";
 import { SalesHistory } from "@/components/SalesHistory";
+import { ViradaCard } from "@/components/ViradaCard";
 import { Card } from "@/components/Card";
 import { findMonthGoals, type MonthGoals } from "@/lib/goals";
 import type { DayGoal } from "@/lib/dailyGoals";
@@ -160,6 +162,40 @@ export default function Home() {
     [sales, dailyTargetMap, monthKey, today],
   );
 
+  // Virada do mês: the last two calendar days, isolated on purpose so the
+  // team feels the month-end sprint regardless of whatever the main filters
+  // are set to — always whole-company, same as the other goal figures.
+  const viradaRange = useMemo(() => buildViradaRange(monthKey), [monthKey]);
+  const viradaSales = useMemo(
+    () =>
+      (sales ?? []).filter(
+        (s) => s.date >= viradaRange.start && s.date <= viradaRange.end,
+      ),
+    [sales, viradaRange],
+  );
+  const viradaRevenue = viradaSales.reduce((sum, s) => sum + s.value, 0);
+  const viradaGoal = useMemo(() => {
+    let sum = 0;
+    let hasAny = false;
+    for (const d of [viradaRange.start, viradaRange.end]) {
+      const value = adjustedDailyTargetMap.get(d) ?? dailyTargetMap.get(d);
+      if (value != null) {
+        sum += value;
+        hasAny = true;
+      }
+    }
+    return hasAny ? sum : null;
+  }, [adjustedDailyTargetMap, dailyTargetMap, viradaRange]);
+  const viradaDaysUntil = Math.max(
+    0,
+    Math.round(
+      (new Date(`${viradaRange.start}T00:00:00Z`).getTime() -
+        new Date(`${today}T00:00:00Z`).getTime()) /
+        86_400_000,
+    ),
+  );
+  const viradaIsActive = today >= viradaRange.start;
+
   function handlePresetChange(p: PresetKey) {
     setPreset(p);
     setCustomRange(null);
@@ -240,6 +276,15 @@ export default function Home() {
           selectedExperts={selectedExperts}
           onToggleExpert={toggleExpert}
           onSelectAllExperts={() => setSelectedExperts([])}
+        />
+
+        <ViradaCard
+          range={viradaRange}
+          revenue={viradaRevenue}
+          count={viradaSales.length}
+          goal={viradaGoal}
+          daysUntil={viradaDaysUntil}
+          isActive={viradaIsActive}
         />
 
         <KpiCards kpis={kpis} />

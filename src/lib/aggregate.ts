@@ -90,6 +90,13 @@ function lastDayOfMonth(iso: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** The last two calendar days of the given month (yyyy-mm) — "a virada". */
+export function buildViradaRange(monthKey: string): DateRange {
+  const end = lastDayOfMonth(`${monthKey}-01`);
+  const start = addDaysIso(end, -1);
+  return { start, end };
+}
+
 /**
  * Reforecasts the daily targets so the month's total goal always holds:
  * every day strictly before `today` is settled (its target is left as-is —
