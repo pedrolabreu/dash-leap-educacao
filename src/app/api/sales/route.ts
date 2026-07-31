@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { parseSalesCsv } from "@/lib/csv";
+import { MANUAL_SALES, isManualDuplicate } from "@/lib/manualSales";
 
 const DEFAULT_SHEET_ID = "1b3UFDTyn5gegoKbj_29yYOH9q57CuTLqlf3A0nDlYU8";
 
@@ -22,6 +23,12 @@ export async function GET() {
 
   const csvText = await res.text();
   const sales = parseSalesCsv(csvText);
+  const pendingManual = MANUAL_SALES.filter(
+    (m) => !isManualDuplicate(m, sales),
+  );
 
-  return NextResponse.json({ sales, fetchedAt: new Date().toISOString() });
+  return NextResponse.json({
+    sales: [...sales, ...pendingManual],
+    fetchedAt: new Date().toISOString(),
+  });
 }
