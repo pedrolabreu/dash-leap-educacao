@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { parseDailyGoalsCsv } from "@/lib/dailyGoals";
+import { MANUAL_DAILY_GOALS } from "@/lib/manualDailyGoals";
 
 const DEFAULT_SHEET_ID = "1b3UFDTyn5gegoKbj_29yYOH9q57CuTLqlf3A0nDlYU8";
 const DEFAULT_GID = "2028871865"; // "controle_meta_dia" tab
@@ -24,7 +25,15 @@ export async function GET() {
 
   const csvText = await res.text();
   const referenceYear = new Date().toISOString().slice(0, 4);
-  const dailyGoals = parseDailyGoalsCsv(csvText, referenceYear);
+  const sheetGoals = parseDailyGoalsCsv(csvText, referenceYear);
+
+  // Manual entries win over the sheet for their dates — lets us load
+  // confirmed figures ahead of (or in place of) a stale/pending sheet update.
+  const byDate = new Map(sheetGoals.map((g) => [g.date, g]));
+  for (const manual of MANUAL_DAILY_GOALS) byDate.set(manual.date, manual);
+  const dailyGoals = Array.from(byDate.values()).sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
 
   return NextResponse.json({ dailyGoals });
 }

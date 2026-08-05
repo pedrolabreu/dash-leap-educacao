@@ -102,10 +102,17 @@ export default function Home() {
   );
   const dailyTargetMap = useMemo(() => {
     const map = new Map<string, number>();
-    (dailyGoals ?? []).forEach((d) => map.set(d.date, d.metaEquipe));
+    (dailyGoals ?? []).forEach((d) => map.set(d.date, d.metaFatGlobal));
     return map;
   }, [dailyGoals]);
   const monthlyGoalFromDaily = useMemo(() => {
+    let sum = 0;
+    for (const d of dailyGoals ?? []) {
+      if (d.date.startsWith(monthKey)) sum += d.metaFatGlobal;
+    }
+    return sum;
+  }, [dailyGoals, monthKey]);
+  const comercialGoalFromDaily = useMemo(() => {
     let sum = 0;
     for (const d of dailyGoals ?? []) {
       if (d.date.startsWith(monthKey)) sum += d.metaEquipe;
@@ -128,8 +135,9 @@ export default function Home() {
     [sales, monthKey],
   );
   const comercialGoal =
-    (monthlyGoalFromDaily > 0 ? monthlyGoalFromDaily : monthGoals?.comercial) ??
-    null;
+    (comercialGoalFromDaily > 0
+      ? comercialGoalFromDaily
+      : monthGoals?.comercial) ?? null;
   const teamGoalRows: TeamGoalRow[] = useMemo(() => {
     const rows: TeamGoalRow[] = [];
     if (comercialGoal != null) {

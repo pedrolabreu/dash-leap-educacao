@@ -4,6 +4,7 @@ export interface DayGoal {
   date: string; // ISO yyyy-mm-dd
   metaEquipe: number;
   metaPorVendedor: number;
+  metaFatGlobal: number;
 }
 
 const PT_MONTHS: Record<string, string> = {
@@ -59,10 +60,19 @@ export function parseDailyGoalsCsv(
     .map((row): DayGoal | null => {
       const date = parseDiaDate(row["Data"] ?? "", referenceYear);
       if (!date) return null;
+      const metaEquipe = parseValue(
+        row["Meta comercial equipe"] ?? row["Meta equipe"],
+      );
+      // Older sheet months don't have a whole-company column yet — fall
+      // back to the comercial figure so those months keep working.
+      const metaFatGlobal =
+        parseValue(row["Meta Fat. Global"] ?? row["Meta Fat Global"]) ||
+        metaEquipe;
       return {
         date,
-        metaEquipe: parseValue(row["Meta equipe"]),
+        metaEquipe,
         metaPorVendedor: parseValue(row["Meta por vendedor"]),
+        metaFatGlobal,
       };
     })
     .filter((d): d is DayGoal => d !== null);
