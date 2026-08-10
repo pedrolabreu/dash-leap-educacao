@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { parseGoalsCsv } from "@/lib/goals";
+import { fetchMonthGoalsFromSupabase } from "@/lib/supabaseGoals";
 
 const DEFAULT_SHEET_ID = "1b3UFDTyn5gegoKbj_29yYOH9q57CuTLqlf3A0nDlYU8";
 const DEFAULT_GOALS_GID = "406321113"; // "Controle de Metas" tab
@@ -12,6 +13,15 @@ function csvUrl(): string {
 }
 
 export async function GET() {
+  // Prefer Supabase (metas_mes / metas_mes_vendedor) once configured; fall
+  // back to the Sheets tab otherwise, or if the query itself fails.
+  try {
+    const supabaseGoals = await fetchMonthGoalsFromSupabase();
+    if (supabaseGoals) return NextResponse.json({ goals: supabaseGoals });
+  } catch (err) {
+    console.error("Supabase goals fetch failed, falling back to sheet", err);
+  }
+
   const res = await fetch(csvUrl(), { next: { revalidate: 60 } });
 
   if (!res.ok) {
