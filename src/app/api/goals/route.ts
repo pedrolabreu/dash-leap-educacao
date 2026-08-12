@@ -17,7 +17,12 @@ export async function GET() {
   // back to the Sheets tab otherwise, or if the query itself fails.
   try {
     const supabaseGoals = await fetchMonthGoalsFromSupabase();
-    if (supabaseGoals) return NextResponse.json({ goals: supabaseGoals });
+    // An empty result isn't distinguishable from "not ready yet" (RLS with
+    // no policy, or an unseeded table both return [] rather than erroring)
+    // — treat it the same as unconfigured and fall back to the sheet.
+    if (supabaseGoals && supabaseGoals.length > 0) {
+      return NextResponse.json({ goals: supabaseGoals });
+    }
   } catch (err) {
     console.error("Supabase goals fetch failed, falling back to sheet", err);
   }

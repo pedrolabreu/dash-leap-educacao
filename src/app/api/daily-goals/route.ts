@@ -28,7 +28,10 @@ export async function GET() {
     );
   }
 
-  if (!baseGoals) {
+  // An empty result isn't distinguishable from "not ready yet" (RLS with no
+  // policy, or an unseeded table both return [] rather than erroring) —
+  // treat it the same as unconfigured and fall back to the sheet.
+  if (!baseGoals || baseGoals.length === 0) {
     const res = await fetch(csvUrl(), { next: { revalidate: 60 } });
 
     if (!res.ok) {
